@@ -1,0 +1,1391 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Total Express • Controle  NC</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <style>
+    :root {
+      --primary: #E11E25;
+      --dark: #111827;
+      --card-bg: #ffffff;
+      --bg: #F3F4F6;
+      --text: #1F2937;
+      --green-ok: #10B981;
+      --red-caf: #E11E25;
+      --yellow: #F59E0B;
+      --blue-base: #2563EB;
+      --gray-total: #4B5563;
+      --purple-done: #8B5CF6;
+      --border: #E5E7EB;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    body { background-color: var(--bg); color: var(--text); padding: 15px; transition: all 0.3s; }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--dark);
+      color: white;
+      padding: 12px 20px;
+      border-radius: 10px;
+      margin-bottom: 15px;
+      border-left: 6px solid var(--primary);
+    }
+    .header h1 { font-size: 17px; font-weight: 800; }
+    .header .badge { background: var(--primary); padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: bold; }
+
+    .input-section, .comparativo-section, .table-container {
+      background: var(--card-bg);
+      padding: 15px;
+      border-radius: 10px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+      margin-bottom: 15px;
+    }
+    .input-section h2, .comparativo-section h2 { font-size: 12px; margin-bottom: 8px; font-weight: 800; color: var(--dark); text-transform: uppercase; }
+    
+    .upload-box {
+      border: 2px dashed #CBD5E1;
+      border-radius: 8px;
+      padding: 15px;
+      text-align: center;
+      background: #F9FAFB;
+      cursor: pointer;
+      transition: 0.2s;
+      margin-bottom: 10px;
+    }
+    .upload-box:hover, .upload-box.dragover { border-color: var(--primary); background: #FEF2F2; }
+    .upload-box p { font-size: 12px; color: #4B5563; font-weight: 700; }
+    .upload-box span { font-size: 10px; color: #9CA3AF; display: block; margin-top: 3px; }
+
+    textarea {
+      width: 100%;
+      height: 48px;
+      padding: 8px;
+      border: 1px solid #D1D5DB;
+      border-radius: 6px;
+      font-size: 11px;
+      font-family: monospace;
+      resize: vertical;
+      margin-bottom: 8px;
+    }
+    textarea:focus { outline: none; border-color: var(--primary); }
+    
+    .actions-bar { display: flex; gap: 6px; flex-wrap: wrap; }
+    .btn {
+      padding: 7px 12px;
+      font-size: 10px;
+      font-weight: 800;
+      border-radius: 6px;
+      cursor: pointer;
+      text-transform: uppercase;
+      border: none;
+      transition: 0.2s;
+    }
+    .btn-primary { background: var(--primary); color: white; }
+    .btn-blue { background: var(--blue-base); color: white; }
+    .btn-dark { background: var(--dark); color: white; }
+    .btn-rules { background: #4B5563; color: white; }
+    .btn-danger { background: #991B1B; color: white; }
+    .btn-outline { background: white; border: 1px solid #D1D5DB; color: #374151; }
+    .btn:hover { opacity: 0.9; }
+
+    /* KPIs */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+    .kpi-card {
+      background: var(--card-bg);
+      padding: 12px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+      border-left: 5px solid #CBD5E1;
+    }
+    .kpi-card.gray { border-left-color: var(--gray-total); }
+    .kpi-card.green { border-left-color: var(--green-ok); }
+    .kpi-card.red { border-left-color: var(--red-caf); }
+    .kpi-card.yellow { border-left-color: var(--yellow); }
+    .kpi-card.blue { border-left-color: var(--blue-base); }
+    .kpi-card.purple { border-left-color: var(--purple-done); }
+    .kpi-card.alert-gps { border-left-color: #DC2626; background: #FFF5F5; }
+    
+    .kpi-title { font-size: 9.5px; font-weight: 800; color: #6B7280; text-transform: uppercase; margin-bottom: 2px; display: block; }
+    .kpi-val { font-size: 19px; font-weight: 900; color: var(--dark); }
+    .kpi-sub { font-size: 9.5px; color: #9CA3AF; margin-top: 2px; display: block; font-weight: 600; }
+
+    /* Comparativo entre Consultas */
+    .comparativo-grid-controls {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+      background: #F9FAFB;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 11px;
+    }
+    .comparativo-kpis {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 10px;
+    }
+
+    /* Gráficos */
+    .charts-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+    @media (max-width: 1200px) { .charts-grid { grid-template-columns: 1fr; } }
+    
+    .chart-card {
+      background: var(--card-bg);
+      padding: 10px 14px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+      display: flex;
+      flex-direction: column;
+    }
+    .chart-card h3 { font-size: 11px; font-weight: 800; margin-bottom: 4px; color: var(--dark); }
+    .chart-wrapper {
+      position: relative;
+      height: 120px;
+      width: 100%;
+      display: flex;
+      justify-content: center;
+    }
+
+    /* Filtros e Tabela */
+    .table-header-flex {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .filtros-topo {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+      background: #F9FAFB;
+      padding: 8px 10px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+    }
+    .filtro-item {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .filtro-label { font-size: 9px; font-weight: 800; color: #6B7280; text-transform: uppercase; }
+    .select-custom {
+      padding: 4px 7px;
+      font-size: 11px;
+      font-weight: 700;
+      border-radius: 5px;
+      border: 1px solid #D1D5DB;
+      background: #FFFFFF;
+      color: var(--dark);
+      cursor: pointer;
+      outline: none;
+      max-width: 190px;
+    }
+    .filter-btn-group { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px; }
+    .btn-filter {
+      padding: 4px 8px;
+      font-size: 9.5px;
+      font-weight: 800;
+      border-radius: 5px;
+      border: 1px solid #D1D5DB;
+      background: white;
+      cursor: pointer;
+      text-transform: uppercase;
+    }
+    .btn-filter.active { background: var(--dark); color: white; border-color: var(--dark); }
+
+    table { width: 100%; border-collapse: collapse; font-size: 10.5px; }
+    th { background: #F9FAFB; padding: 7px 8px; text-align: left; font-weight: 800; color: #4B5563; border-bottom: 2px solid var(--border); font-size: 9.5px; text-transform: uppercase; }
+    td { padding: 6px 8px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    tr:hover { background-color: #F9FAFB; }
+    
+    tr.linha-resolvida { background-color: #F3F4F6 !important; color: #9CA3AF; }
+    tr.linha-resolvida td { text-decoration: line-through; }
+    tr.linha-resolvida td:first-child, tr.linha-resolvida td:last-child { text-decoration: none; }
+    tr.linha-resolvida .badge-status { opacity: 0.35; }
+
+    tr.linha-cerca-fora { background-color: #FEF2F2; }
+
+    .chk-resolvido { width: 15px; height: 15px; cursor: pointer; accent-color: var(--green-ok); }
+    
+    /* Badges */
+    .badge-status { padding: 3px 6px; border-radius: 4px; font-size: 9px; font-weight: 800; display: inline-block; text-align: center; }
+    .badge-ok { background: #D1FAE5; color: #065F46; border: 1px solid #34D399; }
+    .badge-caf { background: #FEE2E2; color: #991B1B; border: 1px solid #F87171; }
+    .badge-analisar { background: #FEF3C7; color: #92400E; border: 1px solid #FCD34D; }
+    .badge-base { background: #DBEAFE; color: #1E40AF; border: 1px solid #93C5FD; }
+
+    .badge-gps-dentro { background: #ECFDF5; color: #065F46; font-size: 8.5px; font-weight: 800; padding: 2px 5px; border-radius: 4px; border: 1px solid #A7F3D0; }
+    .badge-gps-fora { background: #FEE2E2; color: #991B1B; font-size: 8.5px; font-weight: 800; padding: 2px 5px; border-radius: 4px; border: 1px solid #F87171; }
+    .badge-gps-nao { background: #F3F4F6; color: #6B7280; font-size: 8.5px; font-weight: 700; padding: 2px 5px; border-radius: 4px; }
+
+    .badge-aging-0 { background: #ECFDF5; color: #065F46; font-size: 8.5px; font-weight: 800; padding: 2px 5px; border-radius: 4px; }
+    .badge-aging-warn { background: #FEF3C7; color: #92400E; font-size: 8.5px; font-weight: 800; padding: 2px 5px; border-radius: 4px; }
+    .badge-aging-critico { background: #FEE2E2; color: #991B1B; font-size: 8.5px; font-weight: 800; padding: 2px 5px; border-radius: 4px; }
+
+    /* Modal Base */
+    .modal-backdrop {
+      display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.5); z-index: 999; justify-content: center; align-items: center;
+    }
+    .modal-content {
+      background: white; padding: 20px; border-radius: 10px; width: 90%; max-width: 600px;
+      max-height: 85vh; overflow-y: auto; box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 2px solid var(--border); padding-bottom: 10px; }
+    .rule-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #F3F4F6; font-size: 11px; }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div>
+      <h1 id="header-titulo">TOTAL EXPRESS • CONTROLE DE NC</h1>
+    </div>
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <span class="badge">CONTROLE DIARIO</span>
+    </div>
+  </div>
+
+  <div class="input-section">
+    <h2>📥 IMPORTAR DADOS DO POWER BI (EXPORT DETALHADO - 44 COLUNAS)</h2>
+    
+    <div class="upload-box" id="drop-area" onclick="document.getElementById('file-input').click()">
+      <p>📂 Arraste o arquivo do Power BI (.xlsx / .csv) aqui ou clique para carregar</p>
+      <span>Reconhece automaticamente Cerca GPS, Aging, Embarcador, Tentativas e Rotas</span>
+      <input type="file" id="file-input" accept=".xlsx, .xls, .csv" style="display: none;" onchange="lidarComArquivo(this.files[0])">
+    </div>
+
+    <textarea id="raw-data" placeholder="Ou cole a tabela copiada do Power BI aqui..."></textarea>
+    
+    <div class="actions-bar">
+      <button class="btn btn-primary" onclick="adicionarConsultaManual()">+ Salvar Texto Colado</button>
+      <button class="btn btn-rules" onclick="abrirModalRegras()">⚙️ Regras de Status</button>
+      <button class="btn btn-blue" onclick="exportarCSV()">Exportar CSV</button>
+      <button class="btn btn-dark" onclick="copiarWhatsApp()">Copiar WhatsApp</button>
+      <button class="btn btn-danger" onclick="limparTudo()">Limpar Turno</button>
+    </div>
+  </div>
+
+  <!-- Cards de KPIs -->
+  <div class="kpi-grid">
+    <div class="kpi-card gray">
+      <span class="kpi-title">Total Volumes Únicos</span>
+      <span class="kpi-val" id="kpi-total">0</span>
+      <span class="kpi-sub">Estoque consolidado</span>
+    </div>
+    <div class="kpi-card green">
+      <span class="kpi-title">Peças OK</span>
+      <span class="kpi-val" id="kpi-ok" style="color: var(--green-ok);">0</span>
+      <span class="kpi-sub">Em rota / Normal</span>
+    </div>
+    <div class="kpi-card red">
+      <span class="kpi-title">Por em CAF</span>
+      <span class="kpi-val" id="kpi-caf" style="color: var(--red-caf);">0</span>
+      <span class="kpi-sub">Volta para a rua</span>
+    </div>
+    <div class="kpi-card yellow">
+      <span class="kpi-title">Analisar</span>
+      <span class="kpi-val" id="kpi-analisar" style="color: var(--yellow);">0</span>
+      <span class="kpi-sub">Fora rota / Quebra</span>
+    </div>
+    <div class="kpi-card blue">
+      <span class="kpi-title">Retorno Base (RTO)</span>
+      <span class="kpi-val" id="kpi-base" style="color: var(--blue-base);">0</span>
+      <span class="kpi-sub">NC'CX / Devolução</span>
+    </div>
+    <div class="kpi-card alert-gps">
+      <span class="kpi-title">🚨 Cerca Fora (GPS)</span>
+      <span class="kpi-val" id="kpi-cerca-fora" style="color: #DC2626;">0</span>
+      <span class="kpi-sub">Lançado fora do raio</span>
+    </div>
+    <div class="kpi-card purple">
+      <span class="kpi-title">Tratados / OK</span>
+      <span class="kpi-val" id="kpi-resolvidos" style="color: var(--purple-done);">0</span>
+      <span class="kpi-sub" id="kpi-resolvidos-sub">0% concluído</span>
+    </div>
+  </div>
+
+  <div class="comparativo-section">
+    <h2>🔍 COMPARATIVO ENTRE CONSULTAS</h2>
+    <div class="comparativo-grid-controls">
+      <span>Consulta Base (De):</span>
+      <select id="comp-de" class="select-custom" onchange="executarComparativo()"></select>
+      
+      <span>➔ Posterior (Para):</span>
+      <select id="comp-para" class="select-custom" onchange="executarComparativo()"></select>
+
+      <button class="btn btn-dark" style="padding: 4px 8px; font-size: 9.5px;" onclick="copiarWhatsAppComparativo()">Copiar Comparativo</button>
+    </div>
+
+    <div class="comparativo-kpis">
+      <div class="kpi-card green">
+        <span class="kpi-title">🟢 Fora do radar</span>
+        <span class="kpi-val" id="comp-kpi-baixados" style="color: var(--green-ok);">0</span>
+        <span class="kpi-sub">NC'LM tratadas / Baixadas</span>
+      </div>
+      <div class="kpi-card yellow">
+        <span class="kpi-title">🟡 Permanecem Pendentes</span>
+        <span class="kpi-val" id="comp-kpi-pendentes" style="color: var(--yellow);">0</span>
+        <span class="kpi-sub">Continuam sem entrega</span>
+      </div>
+      <div class="kpi-card red">
+        <span class="kpi-title">🔴 Novas Ocorrências</span>
+        <span class="kpi-val" id="comp-kpi-novos" style="color: var(--red-caf);">0</span>
+        <span class="kpi-sub">Entraram na nova rodada</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Gráficos -->
+  <div class="charts-grid" style="grid-template-columns: repeat(3, 1fr);">
+    <div class="chart-card">
+      <h3>🏢 Top Embarcadores (NC CX)</h3>
+      <div class="chart-wrapper">
+        <canvas id="chartNCCX"></canvas>
+      </div>
+    </div>
+    <div class="chart-card">
+      <h3>🍕 Proporção NC CX vs NC LM (%)</h3>
+      <div class="chart-wrapper">
+        <canvas id="chartPieNCSituacao"></canvas>
+      </div>
+    </div>
+    <div class="chart-card">
+      <h3>📈 Evolução das Consultas ao Longo do Dia</h3>
+      <div class="chart-wrapper">
+        <canvas id="chartEvolucao"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="table-container">
+    <div class="table-header-flex">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h3 style="font-size: 13px; font-weight: 800; color: var(--dark);">Lista de Pacotes</h3>
+        <button class="btn btn-outline" style="padding: 3px 6px; font-size: 9px;" onclick="limparResolvidas()">Limpar Resolvidas</button>
+      </div>
+
+      <!-- Barra de Filtros -->
+      <div class="filtros-topo">
+        <div class="filtro-item">
+          <span class="filtro-label">Consulta:</span>
+          <select id="select-consulta" class="select-custom" onchange="aoMudarFiltros()"></select>
+        </div>
+
+        <div class="filtro-item">
+          <span class="filtro-label">Embarcador (Grupo):</span>
+          <select id="select-grupo" class="select-custom" onchange="aoMudarFiltros()">
+            <option value="TODOS">🏢 TODOS OS CLIENTES</option>
+          </select>
+        </div>
+
+        <div class="filtro-item">
+          <span class="filtro-label">PJ Responsável:</span>
+          <select id="select-pj" class="select-custom" onchange="aoMudarFiltros()">
+            <option value="TODOS">🏢 TODAS AS PJS</option>
+          </select>
+        </div>
+
+        <div class="filtro-item">
+          <span class="filtro-label">Aplicador:</span>
+          <select id="select-aplicador" class="select-custom" onchange="aoMudarFiltros()">
+            <option value="TODOS">👤 TODOS OS APLICADORES</option>
+          </select>
+        </div>
+
+        <div class="filtro-item">
+          <span class="filtro-label">Status Power BI:</span>
+          <select id="select-status" class="select-custom" onchange="aoMudarFiltros()">
+            <option value="TODOS">📋 TODOS OS STATUS</option>
+          </select>
+        </div>
+
+        <div class="filtro-item">
+          <span class="filtro-label">Rota:</span>
+          <select id="select-rota" class="select-custom" onchange="aoMudarFiltros()">
+            <option value="TODAS">🚚 TODAS AS ROTAS</option>
+          </select>
+        </div>
+
+        <div class="filtro-item">
+          <span class="filtro-label">Tipo Rota (LOC / INT):</span>
+          <select id="select-tipo-rota" class="select-custom" onchange="aoMudarFiltros()">
+            <option value="TODOS">🛣️ TODOS OS TIPOS</option>
+            <option value="LOC">LOC (LOCAL)</option>
+            <option value="INT">INT (INTERIOR)</option>
+          </select>
+        </div>
+
+        <div class="filtro-item">
+          <span class="filtro-label">Situação:</span>
+          <select id="select-situacao" class="select-custom" onchange="aoMudarFiltros()">
+            <option value="TODAS">📦 TODAS (NC LM / NC CX)</option>
+            <option value="NC LM">NC LM (RUA)</option>
+            <option value="NC CX">NC CX (BASE)</option>
+          </select>
+        </div>
+
+        <div class="filtro-item">
+          <span class="filtro-label">Cerca GPS:</span>
+          <select id="select-cerca" class="select-custom" onchange="aoMudarFiltros()">
+            <option value="TODAS">📍 TODAS AS CERCAS</option>
+            <option value="FORA">🚨 FORA DA CERCA</option>
+            <option value="DENTRO">🟢 DENTRO DA CERCA</option>
+          </select>
+        </div>
+
+        <div class="filtro-item">
+          <span class="filtro-label">Aging (Dias):</span>
+          <select id="select-aging" class="select-custom" onchange="aoMudarFiltros()">
+            <option value="TODOS">⏳ TODAS OS DIAS</option>
+            <option value="00">D0 (HOJE)</option>
+            <option value="01">🟢 D1 (1 DIA)</option>
+            <option value="02">🟡 D2 (2 DIAS)</option>
+            <option value="CRITICO">🚨 CRÍTICO (D+3 OU MAIS)</option>
+            <option value="15+">🚨 15+ DIAS</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="filter-btn-group">
+        <button class="btn-filter active" onclick="filtrarDirecionamento('TODOS', this)">TODOS</button>
+        <button class="btn-filter" onclick="filtrarDirecionamento('OK', this)">OK</button>
+        <button class="btn-filter" onclick="filtrarDirecionamento('POR EM CAF', this)">POR EM CAF</button>
+        <button class="btn-filter" onclick="filtrarDirecionamento('ANALISAR', this)">ANALISAR</button>
+        <button class="btn-filter" onclick="filtrarDirecionamento('RETORNO BASE', this)">RETORNO BASE</button>
+        <button class="btn-filter" onclick="filtrarDirecionamento('PENDENTES', this)">PENDENTES</button>
+      </div>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th style="width: 30px; text-align: center;">OK</th>
+          <th>AWB / RASTREIO (CLIQUE P/ VER)</th>
+          <th>EMBARCADOR (GRUPO)</th>
+          <th>APLICADOR</th>
+          <th>STATUS POWER BI</th>
+          <th>CERCA GPS</th>
+          <th>TENTATIVAS</th>
+          <th>AGING</th>
+          <th>ROTA</th>
+          <th>DIRECIONAMENTO</th>
+        </tr>
+      </thead>
+      <tbody id="tabela-corpo">
+        <tr><td colspan="10" style="text-align: center; color: #9CA3AF; padding: 20px;">Carregue uma planilha do Power BI para iniciar.</td></tr>
+      </tbody>
+    </table>
+    
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px; font-size: 11px; padding: 6px 0; border-top: 1px solid var(--border);">
+      <span id="paginacao-info" style="font-weight: 700; color: #4B5563;">Mostrando 0 de 0 pacotes</span>
+      <div style="display: flex; gap: 6px; align-items: center;">
+        <button class="btn btn-outline" style="padding: 3px 8px; font-size: 10px;" onclick="mudarPagina(-1)">◀ Anterior</button>
+        <span id="paginacao-num" style="font-weight: 800; padding: 0 4px;">1 / 1</span>
+        <button class="btn btn-outline" style="padding: 3px 8px; font-size: 10px;" onclick="mudarPagina(1)">Próxima ▶</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de Consulta Rápida -->
+  <div id="modal-detalhes" class="modal-backdrop">
+    <div class="modal-content" style="max-width: 650px;">
+      <div class="modal-header">
+        <div>
+          <h3 id="det-awb-titulo" style="font-size: 15px; font-weight: 900; color: var(--dark); font-family: monospace;">AWB: -</h3>
+          <span id="det-grupo-sub" style="font-size: 10px; color: #6B7280; font-weight: 700;">Embarcador: -</span>
+        </div>
+        <button class="btn btn-outline" style="padding: 4px 8px;" onclick="fecharModalDetalhes()">✕ Fechar</button>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+        <div style="background: #F9FAFB; padding: 10px; border-radius: 6px; border: 1px solid var(--border);">
+          <span style="font-size: 9px; font-weight: 800; color: #6B7280; text-transform: uppercase; display: block; margin-bottom: 4px;">Status & Direcionamento</span>
+          <div id="det-status-badge" style="margin-bottom: 6px;"></div>
+          <p style="font-size: 11px; font-weight: 700; color: var(--dark);" id="det-status-pbi">-</p>
+          <span style="font-size: 10px; color: #4B5563; display: block; margin-top: 2px;" id="det-cerca-gps">-</span>
+        </div>
+
+        <div style="background: #F9FAFB; padding: 10px; border-radius: 6px; border: 1px solid var(--border);">
+          <span style="font-size: 9px; font-weight: 800; color: #6B7280; text-transform: uppercase; display: block; margin-bottom: 4px;">Histórico de Pátio / Aging</span>
+          <p style="font-size: 11px; font-weight: 700; color: var(--dark);" id="det-aging-tempo">-</p>
+          <p style="font-size: 10.5px; color: #4B5563;" id="det-tentativas-nc">-</p>
+          <span style="font-size: 10px; font-weight: 800;" id="det-ticket-sac">-</span>
+        </div>
+      </div>
+
+      <div style="background: #FFFFFF; padding: 10px; border-radius: 6px; border: 1px solid var(--border); margin-bottom: 10px;">
+        <span style="font-size: 9.5px; font-weight: 800; color: #6B7280; text-transform: uppercase; display: block; margin-bottom: 4px;">📍 Endereço de Entrega</span>
+        <p style="font-size: 11px; font-weight: 700; color: var(--dark);" id="det-endereco-completo">-</p>
+        <p style="font-size: 10.5px; color: #4B5563;" id="det-bairro-cidade-cep">-</p>
+      </div>
+
+      <div style="background: #F8FAFC; padding: 10px; border-radius: 6px; border: 1px solid var(--border); margin-bottom: 15px;">
+        <span style="font-size: 9.5px; font-weight: 800; color: #6B7280; text-transform: uppercase; display: block; margin-bottom: 4px;">🚚 Informações da Última Rota</span>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 10.5px;">
+          <div><strong>Rota:</strong> <span id="det-rota">-</span></div>
+          <div><strong>Nº CAF:</strong> <span id="det-caf">-</span></div>
+          <div><strong>Aplicador:</strong> <span id="det-aplicador">-</span></div>
+          <div><strong>PJ Responsável:</strong> <span id="det-pj">-</span></div>
+          <div style="grid-column: span 2;"><strong>Saída p/ Rua:</strong> <span id="det-data-rua">-</span></div>
+        </div>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 8px;">
+        <button class="btn btn-outline" onclick="fecharModalDetalhes()">Fechar</button>
+        <button class="btn btn-primary" onclick="marcarTratadoModal()">Marcar como Tratado / OK</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal-regras" class="modal-backdrop">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 style="font-size: 13px; font-weight: 800;">⚙️ Regras dos Status da Base</h3>
+        <button class="btn btn-outline" style="padding: 4px 8px;" onclick="fecharModalRegras()">✕ Fechar</button>
+      </div>
+      <p style="font-size: 11px; color: #6B7280; margin-bottom: 12px;">Defina o direcionamento padrão de cada status encontrado na planilha:</p>
+      <div id="lista-regras"></div>
+    </div>
+  </div>
+
+  <script>
+    let chartNCCX = null;
+    let chartEvolucao = null;
+    let chartPieNCSituacao = null;
+
+    let paginaAtual = 1;
+    const itensPorPagina = 100;
+
+    let historicoConsultas = [];
+    let dadosProcessados = [];
+    let snapshotConsultas = {};
+    let filtroConsultaAtual = 'TODAS';
+    let filtroGrupoAtual = 'TODOS';
+    let filtroPjAtual = 'TODOS';
+    let filtroAplicadorAtual = 'TODOS';
+    let filtroStatusAtual = 'TODOS';
+    let filtroRotaAtual = 'TODAS';
+    let filtroTipoRotaAtual = 'TODOS';
+    let filtroSituacaoAtual = 'TODAS';
+    let filtroCercaAtual = 'TODAS';
+    let filtroAgingAtual = 'TODOS';
+    let filtroDirecionamentoAtual = 'TODOS';
+    let contadorUnicoId = 1;
+    let intervaloRelogioTV = null;
+
+    function mudarPagina(direcao) {
+      const filtrados = obterDadosFiltrados();
+      const totalPaginas = Math.ceil(filtrados.length / itensPorPagina) || 1;
+      paginaAtual += direcao;
+      if (paginaAtual < 1) paginaAtual = 1;
+      if (paginaAtual > totalPaginas) paginaAtual = totalPaginas;
+      renderizarTabela(filtrados);
+    }
+
+    let comparativoUltimoResultado = { baixados: 0, pendentes: 0, novos: 0, deNome: '', paraNome: '' };
+    let mapaRegrasStatus = {};
+
+    function copiarTextoSeguro(texto, mensagemSucesso) {
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(texto)
+          .then(() => alert(mensagemSucesso))
+          .catch(() => fallbackCopiar(texto, mensagemSucesso));
+      } else {
+        fallbackCopiar(texto, mensagemSucesso);
+      }
+    }
+
+    function fallbackCopiar(texto, mensagemSucesso) {
+      const area = document.createElement("textarea");
+      area.value = texto;
+      area.style.position = "fixed";
+      area.style.left = "-999999px";
+      document.body.appendChild(area);
+      area.focus();
+      area.select();
+      try {
+        if (document.execCommand('copy')) alert(mensagemSucesso);
+        else prompt("Copie o texto abaixo (Ctrl+C):", texto);
+      } catch (err) {
+        prompt("Copie o texto abaixo (Ctrl+C):", texto);
+      }
+      document.body.removeChild(area);
+    }
+
+    function normalizar(str) {
+      if (!str || str === '-') return '';
+      return String(str).trim().replace(/\s+/g, ' ').toUpperCase();
+    }
+
+    function sugerirDirecionamentoInicial(statusNorm, qtdNcCx = 0) {
+      if (qtdNcCx >= 3) return 'RETORNO BASE';
+      
+      if (statusNorm.includes('EM ROTA') || statusNorm.includes('PROCESSO DE ENTREGA') || statusNorm.includes('TRANSFERENCIA') || statusNorm.includes('TRANSFERÊNCIA')) {
+        return 'OK';
+      }
+      if (statusNorm.includes('FORA DE ROTA') || statusNorm.includes('AVARIADO') || statusNorm.includes('AVARIA VEICULO') || statusNorm.includes('PROBLEMAS OP')) {
+        return 'ANALISAR';
+      }
+      if (statusNorm.includes('RECUSADO') || statusNorm.includes('AUSENTE') || statusNorm.includes('FECHADO') || statusNorm.includes('VISITADO') || statusNorm.includes('INTEMPERIES') || statusNorm.includes('FALTA DE COMPLEMENTO') || statusNorm.includes('FALTA NUMERO')) {
+        return 'POR EM CAF';
+      }
+      return 'RETORNO BASE';
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      configurarDragAndDrop();
+      carregarDoLocalStorage();
+    });
+
+    function configurarDragAndDrop() {
+      const dropArea = document.getElementById('drop-area');
+      ['dragenter', 'dragover'].forEach(eventName => {
+        dropArea.addEventListener(eventName, (e) => { e.preventDefault(); dropArea.classList.add('dragover'); });
+      });
+      ['dragleave', 'drop'].forEach(eventName => {
+        dropArea.addEventListener(eventName, (e) => { e.preventDefault(); dropArea.classList.remove('dragover'); });
+      });
+      dropArea.addEventListener('drop', (e) => {
+        const files = e.dataTransfer.files;
+        if (files && files.length > 0) lidarComArquivo(files[0]);
+      });
+    }
+
+    function lidarComArquivo(file) {
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        const json = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+        if (!json || json.length < 2) {
+          alert("Planilha vazia ou sem cabeçalho.");
+          return;
+        }
+        processarMatrizDeDados(json);
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    function salvarNoLocalStorage() {
+      try {
+        localStorage.setItem('tot_exp_regras', JSON.stringify(mapaRegrasStatus));
+        localStorage.setItem('tot_exp_hist', JSON.stringify(historicoConsultas));
+        localStorage.setItem('tot_exp_data', JSON.stringify(dadosProcessados));
+        localStorage.setItem('tot_exp_snaps', JSON.stringify(snapshotConsultas));
+      } catch (e) { console.warn(e); }
+    }
+
+    function carregarDoLocalStorage() {
+      try {
+        mapaRegrasStatus = JSON.parse(localStorage.getItem('tot_exp_regras')) || {};
+        historicoConsultas = JSON.parse(localStorage.getItem('tot_exp_hist')) || [];
+        dadosProcessados = JSON.parse(localStorage.getItem('tot_exp_data')) || [];
+        snapshotConsultas = JSON.parse(localStorage.getItem('tot_exp_snaps')) || {};
+
+        if (dadosProcessados.length > 0) {
+          contadorUnicoId = dadosProcessados.length + 1;
+          popularTodosSelects();
+          atualizarMetricasETela();
+          executarComparativo();
+        }
+      } catch (e) { console.warn(e); }
+    }
+
+    function classificarStatus(statusStr, qtdNcCx = 0) {
+      const norm = normalizar(statusStr);
+      if (!norm || norm === 'DADOS NÃO INFORMADOS') return 'RETORNO BASE';
+      if (mapaRegrasStatus[norm]) return mapaRegrasStatus[norm];
+      const dir = sugerirDirecionamentoInicial(norm, qtdNcCx);
+      mapaRegrasStatus[norm] = dir;
+      return dir;
+    }
+
+    function processarMatrizDeDados(rows) {
+      let pacotesRodada = [];
+      const header = rows[0].map(c => normalizar(c));
+
+      const idxAWB = header.findIndex(c => c.includes('AWB') || c.includes('RASTREIO') || c.includes('PACOTE'));
+      const idxGrupo = header.findIndex(c => c.includes('GRUPO') || c.includes('CLIENTE') || c.includes('EMBARCADOR'));
+      const idxNome = header.findIndex(c => c.includes('APLICACAO') || c.includes('APLICAÇÃO') || c.includes('APLICADOR'));
+      const idxNomeMot = header.findIndex(c => c.includes('NOME APLICADOR'));
+      const idxStatus = header.findIndex(c => c.includes('DESCRIÇÃO STATUS') || c.includes('STATUS'));
+      const idxSituacao = header.findIndex(c => c.includes('SITUAÇÃO') || c.includes('SITUACAO'));
+      const idxCerca = header.findIndex(c => c === 'CERCA');
+      const idxAging = header.findIndex(c => c.includes('AGING AJUSTADO') || c.includes('AGING'));
+      const idxPrimNC = header.findIndex(c => c.includes('PRIMEIRA NC'));
+      const idxQtdNC = header.findIndex(c => c.includes('QUANTIDADE NC CX'));
+      const idxRota = header.findIndex(c => c === 'ROTA');
+      const idxCidade = header.findIndex(c => c === 'CIDADE');
+      const idxBairro = header.findIndex(c => c === 'BAIRRO');
+      const idxEndereco = header.findIndex(c => c === 'ENDEREÇO' || c === 'ENDERECO');
+      const idxNumero = header.findIndex(c => c.includes('NÚMERO') || c.includes('NUMERO'));
+      const idxCEP = header.findIndex(c => c === 'CEP');
+      const idxCAF = header.findIndex(c => c === 'CAF');
+      const idxHoraRua = header.findIndex(c => c.includes('DATA CAF NA RUA') || c.includes('CAF NA RUA'));
+      const idxPJ = header.findIndex(c => c.includes('PJ RESPONSÁVEL') || c.includes('PJ RESPONSAVEL'));
+      const idxTicket = header.findIndex(c => c === 'TICKET');
+
+      const agora = new Date();
+      const horaStr = agora.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const idConsulta = historicoConsultas.length + 1;
+      const nomeConsulta = `Consulta ${idConsulta} (${horaStr})`;
+
+      for (let i = 1; i < rows.length; i++) {
+        const row = rows[i];
+        if (!row || row.length === 0) continue;
+
+        function obterTexto(idx, def = 'DADOS NÃO INFORMADOS') {
+          if (idx === -1 || row[idx] === undefined || row[idx] === null) return def;
+          const str = String(row[idx]).trim();
+          return (str === '' || str === '-' || str === 'NaN' || str === 'null' || str === 'undefined') ? def : str;
+        }
+
+        let awb = obterTexto(idxAWB, '');
+        if (!awb) continue;
+
+        let grupo = obterTexto(idxGrupo, 'DADOS NÃO INFORMADOS');
+        let nomeApp = obterTexto(idxNome, '');
+        let nomeMot = obterTexto(idxNomeMot, '');
+        let motorista = nomeMot || nomeApp || 'DADOS NÃO INFORMADOS';
+
+        let rawStatus = obterTexto(idxStatus, 'DADOS NÃO INFORMADOS');
+        let status = (rawStatus === 'DADOS NÃO INFORMADOS') ? 'DADOS NÃO INFORMADOS' : normalizar(rawStatus);
+
+        let situacao = obterTexto(idxSituacao, 'DADOS NÃO INFORMADOS');
+        let cerca = obterTexto(idxCerca, 'DADOS NÃO INFORMADOS');
+        let aging = obterTexto(idxAging, '00');
+        let primNC = obterTexto(idxPrimNC, 'DADOS NÃO INFORMADOS');
+        let qtdNC = (idxQtdNC !== -1 && !isNaN(row[idxQtdNC]) && row[idxQtdNC] !== '' && row[idxQtdNC] !== null) ? Number(row[idxQtdNC]) : 0;
+        let rota = obterTexto(idxRota, 'DADOS NÃO INFORMADOS');
+        let cidade = obterTexto(idxCidade, 'DADOS NÃO INFORMADOS');
+        let bairro = obterTexto(idxBairro, 'DADOS NÃO INFORMADOS');
+        let endereco = obterTexto(idxEndereco, 'DADOS NÃO INFORMADOS');
+        let numero = obterTexto(idxNumero, '');
+        let cep = obterTexto(idxCEP, 'DADOS NÃO INFORMADOS');
+        let caf = obterTexto(idxCAF, '0');
+        let dataRua = obterTexto(idxHoraRua, 'DADOS NÃO INFORMADOS');
+        let pj = obterTexto(idxPJ, 'DADOS NÃO INFORMADOS');
+        let ticket = obterTexto(idxTicket, 'Não');
+
+        let direcionamento = classificarStatus(status, qtdNC);
+
+        pacotesRodada.push({
+          consultaId: idConsulta,
+          consultaNome: nomeConsulta,
+          hora: horaStr,
+          awb,
+          grupo,
+          motorista,
+          status,
+          situacao,
+          cerca,
+          aging,
+          primNC,
+          qtdNC,
+          rota,
+          cidade,
+          bairro,
+          endereco,
+          numero,
+          cep,
+          caf,
+          dataRua,
+          pj,
+          ticket,
+          direcionamento
+        });
+      }
+
+      if (pacotesRodada.length === 0) {
+        alert("Nenhum registro válido encontrado na planilha.");
+        return;
+      }
+
+      snapshotConsultas[idConsulta] = pacotesRodada;
+
+      const okQtd = pacotesRodada.filter(r => r.direcionamento === 'OK').length;
+      const cafQtd = pacotesRodada.filter(r => r.direcionamento === 'POR EM CAF').length;
+      const analisarQtd = pacotesRodada.filter(r => r.direcionamento === 'ANALISAR').length;
+      const baseQtd = pacotesRodada.filter(r => r.direcionamento === 'RETORNO BASE').length;
+
+      historicoConsultas.push({
+        id: idConsulta,
+        nome: nomeConsulta,
+        hora: horaStr,
+        total: pacotesRodada.length,
+        ok: okQtd,
+        caf: cafQtd,
+        analisar: analisarQtd,
+        base: baseQtd
+      });
+
+      // Deduplicação inteligente
+      pacotesRodada.forEach(item => {
+        const exist = dadosProcessados.find(r => r.awb === item.awb);
+        if (exist) {
+          Object.assign(exist, item);
+        } else {
+          dadosProcessados.push({
+            uid: 'pkg_' + contadorUnicoId++,
+            ...item,
+            resolvido: false
+          });
+        }
+      });
+
+      document.getElementById('raw-data').value = '';
+      document.getElementById('file-input').value = '';
+      salvarNoLocalStorage();
+      popularTodosSelects();
+      atualizarMetricasETela();
+      executarComparativo();
+    }
+
+    function adicionarConsultaManual() {
+      const rawText = document.getElementById('raw-data').value.trim();
+      if (!rawText) return alert("Cole os dados ou arraste um arquivo.");
+      const lines = rawText.split('\n');
+      const sep = lines[0].includes('\t') ? '\t' : (lines[0].includes(';') ? ';' : ',');
+      processarMatrizDeDados(lines.map(l => l.split(sep)));
+    }
+
+    function popularTodosSelects() {
+      // 1. Consultas
+      const selC = document.getElementById('select-consulta');
+      selC.innerHTML = '<option value="TODAS">⏰ ESTOQUE CONSOLIDADO (SEM DUPLICADAS)</option>';
+      historicoConsultas.forEach(c => {
+        selC.innerHTML += `<option value="${c.id}">🕒 ${c.nome} (${c.total} pçs)</option>`;
+      });
+      selC.value = filtroConsultaAtual;
+
+      const base = obterDadosBase();
+
+      // 2. Grupos / Embarcadores
+      const selG = document.getElementById('select-grupo');
+      selG.innerHTML = '<option value="TODOS">🏢 TODOS OS CLIENTES</option>';
+      const grupos = [...new Set(base.map(r => r.grupo))].filter(Boolean).sort();
+      grupos.forEach(g => { selG.innerHTML += `<option value="${g}">${g}</option>`; });
+      selG.value = filtroGrupoAtual;
+
+      // 2.1 PJ Responsável
+      const selPj = document.getElementById('select-pj');
+      if (selPj) {
+        selPj.innerHTML = '<option value="TODOS">🏢 TODAS AS PJS</option>';
+        const pjs = [...new Set(base.map(r => r.pj))].filter(Boolean).sort();
+        pjs.forEach(p => { selPj.innerHTML += `<option value="${p}">${p}</option>`; });
+        selPj.value = filtroPjAtual;
+      }
+
+      // 3. Aplicadores
+      const selM = document.getElementById('select-aplicador');
+      selM.innerHTML = '<option value="TODOS">👤 TODOS OS APLICADORES</option>';
+      const motoristas = [...new Set(base.map(r => r.motorista))].filter(Boolean).sort();
+      motoristas.forEach(m => { selM.innerHTML += `<option value="${m}">${m}</option>`; });
+      selM.value = filtroAplicadorAtual;
+
+      // 4. Status Power BI
+      const selS = document.getElementById('select-status');
+      selS.innerHTML = '<option value="TODOS">📋 TODOS OS STATUS</option>';
+      const statusList = [...new Set(base.map(r => r.status))].filter(Boolean).sort();
+      statusList.forEach(s => { selS.innerHTML += `<option value="${s}">${s}</option>`; });
+      selS.value = filtroStatusAtual;
+
+      // 5. Rotas
+      const selR = document.getElementById('select-rota');
+      selR.innerHTML = '<option value="TODAS">🚚 TODAS AS ROTAS</option>';
+      const rotasList = [...new Set(base.map(r => r.rota))].filter(Boolean).sort();
+      rotasList.forEach(r => { selR.innerHTML += `<option value="${r}">${r}</option>`; });
+      selR.value = filtroRotaAtual;
+
+      // 6. Comparativo Selects
+      popularSelectsComparativo();
+    }
+
+    function popularSelectsComparativo() {
+      const selDe = document.getElementById('comp-de');
+      const selPara = document.getElementById('comp-para');
+      selDe.innerHTML = ''; selPara.innerHTML = '';
+      if (historicoConsultas.length === 0) {
+        selDe.innerHTML = '<option value="">Sem dados</option>';
+        selPara.innerHTML = '<option value="">Sem dados</option>';
+        return;
+      }
+      historicoConsultas.forEach(c => {
+        selDe.innerHTML += `<option value="${c.id}">${c.nome}</option>`;
+        selPara.innerHTML += `<option value="${c.id}">${c.nome}</option>`;
+      });
+      if (historicoConsultas.length >= 2) {
+        selDe.value = historicoConsultas[historicoConsultas.length - 2].id;
+        selPara.value = historicoConsultas[historicoConsultas.length - 1].id;
+      } else {
+        selDe.value = historicoConsultas[0].id;
+        selPara.value = historicoConsultas[0].id;
+      }
+    }
+
+    function executarComparativo() {
+      const idDe = document.getElementById('comp-de').value;
+      const idPara = document.getElementById('comp-para').value;
+      if (!idDe || !idPara || historicoConsultas.length === 0) return;
+
+      const pDe = snapshotConsultas[idDe] || [];
+      const pPara = snapshotConsultas[idPara] || [];
+      const aDe = new Set(pDe.map(r => r.awb));
+      const aPara = new Set(pPara.map(r => r.awb));
+
+      let baixados = 0, pendentes = 0, novos = 0;
+      pDe.forEach(r => { if (!aPara.has(r.awb)) baixados++; else pendentes++; });
+      pPara.forEach(r => { if (!aDe.has(r.awb)) novos++; });
+
+      document.getElementById('comp-kpi-baixados').innerText = baixados;
+      document.getElementById('comp-kpi-pendentes').innerText = pendentes;
+      document.getElementById('comp-kpi-novos').innerText = novos;
+
+      const deObj = historicoConsultas.find(c => c.id == idDe);
+      const paraObj = historicoConsultas.find(c => c.id == idPara);
+      comparativoUltimoResultado = {
+        baixados, pendentes, novos,
+        deNome: deObj ? deObj.nome : `Consulta ${idDe}`,
+        paraNome: paraObj ? paraObj.nome : `Consulta ${idPara}`
+      };
+    }
+
+    function copiarWhatsAppComparativo() {
+      if (historicoConsultas.length < 2) return alert("Necessário ao menos duas consultas.");
+      executarComparativo();
+      let txt = `*📊 COMPARATIVO ENTRE CONSULTAS*\n`;
+      txt += `🔄 *Comparativo:* ${comparativoUltimoResultado.deNome} ➔ ${comparativoUltimoResultado.paraNome}\n\n`;
+      txt += `🟢 *Fora do radar (Baixadas):* ${comparativoUltimoResultado.baixados} pacotes\n`;
+      txt += `🟡 *Permanecem Pendentes:* ${comparativoUltimoResultado.pendentes} pacotes\n`;
+      txt += `🔴 *Novas Ocorrências:* +${comparativoUltimoResultado.novos} pacotes\n\n`;
+      txt += `_Controle automático Total Express._`;
+      copiarTextoSeguro(txt, "Resumo do comparativo copiado!");
+    }
+
+    function aoMudarFiltros() {
+      filtroConsultaAtual = document.getElementById('select-consulta').value;
+      filtroGrupoAtual = document.getElementById('select-grupo').value;
+      const pjEl = document.getElementById('select-pj');
+      if (pjEl) filtroPjAtual = pjEl.value;
+      filtroAplicadorAtual = document.getElementById('select-aplicador').value;
+      filtroStatusAtual = document.getElementById('select-status').value;
+      filtroRotaAtual = document.getElementById('select-rota').value;
+      const tipoRotaEl = document.getElementById('select-tipo-rota');
+      if (tipoRotaEl) filtroTipoRotaAtual = tipoRotaEl.value;
+      filtroSituacaoAtual = document.getElementById('select-situacao').value;
+      filtroCercaAtual = document.getElementById('select-cerca').value;
+      filtroAgingAtual = document.getElementById('select-aging').value;
+      paginaAtual = 1;
+      atualizarMetricasETela();
+    }
+
+    function filtrarDirecionamento(tipo, btn) {
+      document.querySelectorAll('.btn-filter').forEach(b => b.classList.remove('active'));
+      if (btn) btn.classList.add('active');
+      filtroDirecionamentoAtual = tipo;
+      paginaAtual = 1;
+      atualizarMetricasETela();
+    }
+
+    function alternarCheck(uid) {
+      const it = dadosProcessados.find(r => r.uid === uid);
+      if (it) {
+        it.resolvido = !it.resolvido;
+        salvarNoLocalStorage();
+        atualizarMetricasETela();
+      }
+    }
+
+    let awbSelecionadaModal = null;
+
+    function abrirModalDetalhes(awb) {
+      const base = obterDadosBase();
+      const r = base.find(item => item.awb === awb);
+      if (!r) return;
+
+      awbSelecionadaModal = r.uid;
+
+      document.getElementById('det-awb-titulo').innerText = `AWB: ${r.awb}`;
+      document.getElementById('det-grupo-sub').innerText = `Embarcador: ${r.grupo} | Situação: ${r.situacao}`;
+
+      let badgeDir = 'badge-base';
+      if (r.direcionamento === 'OK') badgeDir = 'badge-ok';
+      else if (r.direcionamento === 'POR EM CAF') badgeDir = 'badge-caf';
+      else if (r.direcionamento === 'ANALISAR') badgeDir = 'badge-analisar';
+
+      document.getElementById('det-status-badge').innerHTML = `<span class="badge-status ${badgeDir}">${r.direcionamento}</span>`;
+      document.getElementById('det-status-pbi').innerText = `Status: ${r.status}`;
+      
+      let cercaTxt = `📍 Cerca GPS: ${r.cerca}`;
+      if (r.cerca.toUpperCase().includes('FORA')) cercaTxt = `🚨 Cerca GPS: FORA DO RAIO (Verificar)`;
+      else if (r.cerca.toUpperCase().includes('DENTRO')) cercaTxt = `🟢 Cerca GPS: Dentro do endereço`;
+      document.getElementById('det-cerca-gps').innerText = cercaTxt;
+
+      document.getElementById('det-aging-tempo').innerText = `Idade na Base: ${r.aging} dia(s)`;
+      const tentTexto = (r.primNC === 'Sim' || r.qtdNC === 0) ? '1ª Tentativa (Primeira NC)' : `${r.qtdNC + 1}ª Tentativa (${r.qtdNC} NCs acumuladas)`;
+      document.getElementById('det-tentativas-nc').innerText = `Ocorrências: ${tentTexto}`;
+      
+      const ticketTxt = (r.ticket && r.ticket.toUpperCase() === 'SIM') ? '<span style="color:#DC2626;">🚨 Chamado SAC Aberto: SIM</span>' : '<span style="color:#059669;">Chamado SAC: Não</span>';
+      document.getElementById('det-ticket-sac').innerHTML = ticketTxt;
+
+      const numStr = (r.numero && r.numero !== 'DADOS NÃO INFORMADOS') ? `, Nº ${r.numero}` : '';
+      document.getElementById('det-endereco-completo').innerText = `${r.endereco}${numStr}`;
+      document.getElementById('det-bairro-cidade-cep').innerText = `Bairro: ${r.bairro} | Cidade: ${r.cidade} | CEP: ${r.cep}`;
+
+      document.getElementById('det-rota').innerText = r.rota;
+      document.getElementById('det-caf').innerText = (r.caf && r.caf !== '0') ? r.caf : 'Não vinculada';
+      document.getElementById('det-aplicador').innerText = r.motorista;
+      document.getElementById('det-pj').innerText = r.pj;
+      document.getElementById('det-data-rua').innerText = r.dataRua;
+
+      document.getElementById('modal-detalhes').style.display = 'flex';
+    }
+
+    function fecharModalDetalhes() {
+      document.getElementById('modal-detalhes').style.display = 'none';
+      awbSelecionadaModal = null;
+    }
+
+    function marcarTratadoModal() {
+      if (awbSelecionadaModal) {
+        alternarCheck(awbSelecionadaModal);
+        fecharModalDetalhes();
+      }
+    }
+
+    function abrirModalRegras() {
+      const modal = document.getElementById('modal-regras');
+      const lista = document.getElementById('lista-regras');
+      lista.innerHTML = '';
+      const statusSet = new Set(dadosProcessados.map(r => r.status).filter(Boolean));
+      const arr = Array.from(statusSet).sort();
+      if (arr.length === 0) {
+        lista.innerHTML = '<p style="text-align:center; padding:15px; color:#9CA3AF;">Nenhum status carregado.</p>';
+      } else {
+        arr.forEach(st => {
+          const dir = mapaRegrasStatus[st] || sugerirDirecionamentoInicial(st);
+          lista.innerHTML += `
+            <div class="rule-row">
+              <span style="font-weight:700; max-width:60%;">${st}</span>
+              <select class="select-custom" onchange="alterarRegraStatus('${st}', this.value)">
+                <option value="OK" ${dir === 'OK' ? 'selected' : ''}>🟢 OK</option>
+                <option value="POR EM CAF" ${dir === 'POR EM CAF' ? 'selected' : ''}>🔴 POR EM CAF</option>
+                <option value="ANALISAR" ${dir === 'ANALISAR' ? 'selected' : ''}>🟡 ANALISAR</option>
+                <option value="RETORNO BASE" ${dir === 'RETORNO BASE' ? 'selected' : ''}>🔵 RETORNO BASE</option>
+              </select>
+            </div>
+          `;
+        });
+      }
+      modal.style.display = 'flex';
+    }
+
+    function fecharModalRegras() { document.getElementById('modal-regras').style.display = 'none'; }
+
+    function alterarRegraStatus(status, novoDir) {
+      mapaRegrasStatus[status] = novoDir;
+      dadosProcessados.forEach(r => { if (r.status === status) r.direcionamento = novoDir; });
+      for (let sId in snapshotConsultas) {
+        snapshotConsultas[sId].forEach(r => { if (r.status === status) r.direcionamento = novoDir; });
+      }
+      salvarNoLocalStorage();
+      atualizarMetricasETela();
+      executarComparativo();
+    }
+
+    function obterDadosBase() {
+      if (filtroConsultaAtual === 'TODAS') return dadosProcessados;
+      const snap = snapshotConsultas[filtroConsultaAtual] || [];
+      return snap.map((s, idx) => {
+        const itemReal = dadosProcessados.find(d => d.awb === s.awb);
+        return { uid: itemReal ? itemReal.uid : 'snap_' + idx, resolvido: itemReal ? itemReal.resolvido : false, ...s };
+      });
+    }
+
+    function obterDadosFiltrados() {
+      const base = obterDadosBase();
+      return base.filter(r => {
+        const mGrupo = (filtroGrupoAtual === 'TODOS' || r.grupo === filtroGrupoAtual);
+        const mPj = (filtroPjAtual === 'TODOS' || r.pj === filtroPjAtual);
+        const mMot = (filtroAplicadorAtual === 'TODOS' || r.motorista === filtroAplicadorAtual);
+        const mStatus = (filtroStatusAtual === 'TODOS' || r.status === filtroStatusAtual);
+        const mRota = (filtroRotaAtual === 'TODAS' || r.rota === filtroRotaAtual);
+        const mTipoRota = (filtroTipoRotaAtual === 'TODOS' || String(r.rota).toUpperCase().includes(filtroTipoRotaAtual));
+        const mSit = (filtroSituacaoAtual === 'TODAS' || r.situacao === filtroSituacaoAtual);
+        
+        let mCerca = true;
+        if (filtroCercaAtual === 'FORA') mCerca = r.cerca.toUpperCase().includes('FORA');
+        else if (filtroCercaAtual === 'DENTRO') mCerca = r.cerca.toUpperCase().includes('DENTRO');
+
+        let mAging = true;
+        const agStr = String(r.aging).trim().padStart(2, '0');
+        const agNum = Number(r.aging);
+
+        if (filtroAgingAtual === '00') {
+          mAging = (agStr === '00' || agNum === 0);
+        } else if (filtroAgingAtual === '01') {
+          mAging = (agStr === '01' || agNum === 1 || r.aging === '1');
+        } else if (filtroAgingAtual === '02') {
+          mAging = (agStr === '02' || agNum === 2 || r.aging === '2');
+        } else if (filtroAgingAtual === 'CRITICO') {
+          mAging = (agNum >= 3 || r.aging === '15+' || (agStr !== '00' && agStr !== '01' && agStr !== '02'));
+        } else if (filtroAgingAtual === '15+') {
+          mAging = (r.aging === '15+' || agNum >= 15);
+        }
+
+        let mDir = true;
+        if (filtroDirecionamentoAtual === 'PENDENTES') mDir = !r.resolvido;
+        else if (filtroDirecionamentoAtual !== 'TODOS') mDir = (r.direcionamento === filtroDirecionamentoAtual);
+
+        return mGrupo && mPj && mMot && mStatus && mRota && mTipoRota && mSit && mCerca && mAging && mDir;
+      });
+    }
+
+    function atualizarMetricasETela() {
+      const base = obterDadosBase();
+      const total = base.length;
+      const ok = base.filter(r => r.direcionamento === 'OK').length;
+      const caf = base.filter(r => r.direcionamento === 'POR EM CAF').length;
+      const analisar = base.filter(r => r.direcionamento === 'ANALISAR').length;
+      const baseCount = base.filter(r => r.direcionamento === 'RETORNO BASE').length;
+      const cercaFora = base.filter(r => r.cerca.toUpperCase().includes('FORA')).length;
+      const resolvidos = base.filter(r => r.resolvido).length;
+      const perc = total > 0 ? ((resolvidos / total) * 100).toFixed(0) : 0;
+
+      document.getElementById('kpi-total').innerText = total;
+      document.getElementById('kpi-ok').innerText = ok;
+      document.getElementById('kpi-caf').innerText = caf;
+      document.getElementById('kpi-analisar').innerText = analisar;
+      document.getElementById('kpi-base').innerText = baseCount;
+      document.getElementById('kpi-cerca-fora').innerText = cercaFora;
+      document.getElementById('kpi-resolvidos').innerText = resolvidos;
+      document.getElementById('kpi-resolvidos-sub').innerText = `${perc}% concluído (${total - resolvidos} pendentes)`;
+
+      renderizarTabela(obterDadosFiltrados());
+      atualizarGraficos(ok, caf, analisar, baseCount, base);
+      atualizarGraficoEvolucao();
+    }
+
+    function renderizarTabela(lista) {
+      const tbody = document.getElementById('tabela-corpo');
+      tbody.innerHTML = '';
+
+      const totalItens = lista.length;
+      const totalPaginas = Math.ceil(totalItens / itensPorPagina) || 1;
+      if (paginaAtual > totalPaginas) paginaAtual = totalPaginas;
+
+      const inicio = (paginaAtual - 1) * itensPorPagina;
+      const fim = inicio + itensPorPagina;
+      const listaPaginada = lista.slice(inicio, fim);
+
+      const infoSpan = document.getElementById('paginacao-info');
+      if (infoSpan) infoSpan.innerText = `Mostrando ${totalItens > 0 ? inicio + 1 : 0} a ${Math.min(fim, totalItens)} de ${totalItens} pacotes`;
+      const numSpan = document.getElementById('paginacao-num');
+      if (numSpan) numSpan.innerText = `${paginaAtual} / ${totalPaginas}`;
+
+      if (listaPaginada.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; color:#9CA3AF; padding:20px;">Nenhum pacote encontrado para estes filtros.</td></tr>`;
+        return;
+      }
+
+      listaPaginada.forEach(r => {
+        let badgeDir = 'badge-base';
+        if (r.direcionamento === 'OK') badgeDir = 'badge-ok';
+        else if (r.direcionamento === 'POR EM CAF') badgeDir = 'badge-caf';
+        else if (r.direcionamento === 'ANALISAR') badgeDir = 'badge-analisar';
+
+        let badgeCerca = '<span class="badge-gps-nao">DADOS NÃO INFORMADOS</span>';
+        if (r.cerca.toUpperCase().includes('DENTRO')) badgeCerca = '<span class="badge-gps-dentro">DENTRO</span>';
+        else if (r.cerca.toUpperCase().includes('FORA')) badgeCerca = '<span class="badge-gps-fora">🚨 FORA</span>';
+
+        let badgeAging = '<span class="badge-aging-0">' + r.aging + '</span>';
+        if (r.aging === '15+' || Number(r.aging) >= 4) badgeAging = '<span class="badge-aging-critico">' + r.aging + ' dias</span>';
+        else if (Number(r.aging) >= 2) badgeAging = '<span class="badge-aging-warn">' + r.aging + ' dias</span>';
+
+        const tentTexto = (r.primNC === 'Sim' || r.qtdNC === 0) ? '1ª NC' : `${r.qtdNC + 1}ª NC (${r.qtdNC} CX)`;
+        const tentColor = (r.qtdNC >= 2) ? 'color: #991B1B; font-weight:800;' : 'color: #065F46; font-weight:700;';
+
+        const trClass = (r.resolvido ? 'linha-resolvida ' : '') + (r.cerca.toUpperCase().includes('FORA') ? 'linha-cerca-fora' : '');
+
+        tbody.innerHTML += `
+          <tr class="${trClass}">
+            <td style="text-align: center;">
+              <input type="checkbox" class="chk-resolvido" ${r.resolvido ? 'checked' : ''} onchange="alternarCheck('${r.uid}')">
+            </td>
+            <td style="font-family: monospace; font-weight: 800; font-size: 11px;"><a href="javascript:void(0)" onclick="abrirModalDetalhes('${r.awb}')" style="color: var(--blue-base); text-decoration: underline; cursor: pointer;">${r.awb}</a></td>
+            <td><strong>${r.grupo}</strong></td>
+            <td>${r.motorista}</td>
+            <td><strong>${r.status}</strong></td>
+            <td>${badgeCerca}</td>
+            <td style="${tentColor}">${tentTexto}</td>
+            <td>${badgeAging}</td>
+            <td><strong>${r.rota}</strong></td>
+            <td><span class="badge-status ${badgeDir}">${r.direcionamento}</span></td>
+          </tr>
+        `;
+      });
+    }
+
+    function limparResolvidas() {
+      dadosProcessados = dadosProcessados.filter(r => !r.resolvido);
+      salvarNoLocalStorage();
+      popularTodosSelects();
+      atualizarMetricasETela();
+      executarComparativo();
+    }
+
+    function limparTudo() {
+      if (confirm("Deseja realmente limpar todos os dados do turno?")) {
+        historicoConsultas = []; dadosProcessados = []; snapshotConsultas = {};
+        localStorage.removeItem('tot_exp_hist');
+        localStorage.removeItem('tot_exp_data');
+        localStorage.removeItem('tot_exp_snaps');
+        popularTodosSelects();
+        atualizarMetricasETela();
+        executarComparativo();
+      }
+    }
+
+    function atualizarGraficoEvolucao() {
+      const ctx = document.getElementById('chartEvolucao').getContext('2d');
+      if (chartEvolucao) chartEvolucao.destroy();
+      chartEvolucao = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: historicoConsultas.map(h => h.hora),
+          datasets: [
+            { label: 'OK', data: historicoConsultas.map(h => h.ok), borderColor: '#10B981', backgroundColor: '#10B981', tension: 0.2 },
+            { label: 'CAF', data: historicoConsultas.map(h => h.caf), borderColor: '#E11E25', backgroundColor: '#E11E25', tension: 0.2 },
+            { label: 'Analisar', data: historicoConsultas.map(h => h.analisar), borderColor: '#F59E0B', backgroundColor: '#F59E0B', tension: 0.2 },
+            { label: 'Retorno', data: historicoConsultas.map(h => h.base), borderColor: '#2563EB', backgroundColor: '#2563EB', tension: 0.2 }
+          ]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { position: 'bottom', labels: { boxWidth: 8, font: { size: 9 } } } },
+          scales: { y: { beginAtZero: true, grid: { color: '#E5E7EB' } } }
+        }
+      });
+    }
+
+    function atualizarGraficos(ok, caf, analisar, base, rows) {
+      // 1. Top Embarcadores (NC CX)
+      const countsCx = {};
+      rows.filter(r => String(r.situacao).toUpperCase().includes('NC CX')).forEach(r => {
+        if (r.grupo && r.grupo !== '-') countsCx[r.grupo] = (countsCx[r.grupo] || 0) + 1;
+      });
+      const topCx = Object.entries(countsCx).sort((a, b) => b[1] - a[1]).slice(0, 5);
+
+      const ctxCx = document.getElementById('chartNCCX').getContext('2d');
+      if (chartNCCX) chartNCCX.destroy();
+      chartNCCX = new Chart(ctxCx, {
+        type: 'bar',
+        data: {
+          labels: topCx.map(i => i[0].length > 18 ? i[0].substring(0, 16) + '..' : i[0]),
+          datasets: [{ data: topCx.map(i => i[1]), backgroundColor: '#2563EB', borderRadius: 4 }]
+        },
+        options: {
+          indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
+          scales: { x: { beginAtZero: true, precision: 0 }, y: { ticks: { font: { size: 9 } } } }
+        }
+      });
+
+      // 2. Gráfico Pizza: NC CX vs NC LM (%)
+      let totalNcCx = 0;
+      let totalNcLm = 0;
+      rows.forEach(r => {
+        const sit = String(r.situacao).toUpperCase();
+        if (sit.includes('NC CX')) totalNcCx++;
+        else if (sit.includes('NC LM')) totalNcLm++;
+      });
+
+      const ctxPie = document.getElementById('chartPieNCSituacao').getContext('2d');
+      if (chartPieNCSituacao) chartPieNCSituacao.destroy();
+      chartPieNCSituacao = new Chart(ctxPie, {
+        type: 'doughnut',
+        data: {
+          labels: ['NC CX (Base)', 'NC LM (Rua)'],
+          datasets: [{
+            data: [totalNcCx, totalNcLm],
+            backgroundColor: ['#2563EB', '#E11E25'],
+            borderWidth: 0
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'right', labels: { boxWidth: 8, font: { size: 9 } } }
+          }
+        }
+      });
+    }
+
+    function exportarCSV() {
+      const dados = obterDadosFiltrados();
+      if (dados.length === 0) return alert("Nenhum dado para exportar.");
+      let csv = "data:text/csv;charset=utf-8,";
+      csv += "HORA,AWB,EMBARCADOR_GRUPO,APLICADOR,STATUS,SITUACAO,CERCA_GPS,AGING,PRIMEIRA_NC,QTD_NC_CX,ROTA,DIRECIONAMENTO,TRATATIVA\n";
+      dados.forEach(r => {
+        csv += `"${r.hora}","${r.awb}","${r.grupo}","${r.motorista}","${r.status}","${r.situacao}","${r.cerca}","${r.aging}","${r.primNC}","${r.qtdNC}","${r.rota}","${r.direcionamento}","${r.resolvido ? 'RESOLVIDO' : 'PENDENTE'}"\n`;
+      });
+      const link = document.createElement("a");
+      link.setAttribute("href", encodeURI(csv));
+      link.setAttribute("download", `Relatorio_LastMile_TotalExpress_${new Date().toISOString().slice(0,10)}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    function copiarWhatsApp() {
+      const base = obterDadosFiltrados();
+      if (base.length === 0) return alert("Sem dados disponíveis.");
+      const total = base.length;
+      const ok = base.filter(r => r.direcionamento === 'OK').length;
+      const caf = base.filter(r => r.direcionamento === 'POR EM CAF').length;
+      const analisar = base.filter(r => r.direcionamento === 'ANALISAR').length;
+      const baseCount = base.filter(r => r.direcionamento === 'RETORNO BASE').length;
+      const cercaFora = base.filter(r => r.cerca.toUpperCase().includes('FORA')).length;
+      const resolvidos = base.filter(r => r.resolvido).length;
+
+      let txt = `*📊 TOTAL EXPRESS • CONTROLE LAST MILE*\n`;
+      if (filtroGrupoAtual !== 'TODOS') txt += `🏢 *Cliente:* ${filtroGrupoAtual}\n`;
+      if (filtroAplicadorAtual !== 'TODOS') txt += `👤 *Aplicador:* ${filtroAplicadorAtual}\n`;
+      if (filtroStatusAtual !== 'TODOS') txt += `📋 *Status:* ${filtroStatusAtual}\n`;
+      if (filtroRotaAtual !== 'TODAS') txt += `🚚 *Rota:* ${filtroRotaAtual}\n`;
+      txt += `\n📦 *Total Geral:* ${total} pacotes\n`;
+      txt += `🟢 *Peças OK (Em Rota):* ${ok}\n`;
+      txt += `🔴 *Por em CAF (Rua):* ${caf}\n`;
+      txt += `🟡 *Analisar (Quebra/Fora de rota):* ${analisar}\n`;
+      txt += `🔵 *Retorno Base (RTO):* ${baseCount}\n`;
+      if (cercaFora > 0) txt += `🚨 *Fora da Cerca GPS:* ${cercaFora} pacotes\n`;
+      txt += `✅ *Tratados:* ${resolvidos} / ${total}\n\n`;
+      txt += `_Relatório gerado automaticamente._`;
+
+      copiarTextoSeguro(txt, "Resumo do WhatsApp copiado!");
+    }
+  </script>
+</body>
+</html>
