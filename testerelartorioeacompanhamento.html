@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Total Express - Dashboard Logístico Avançado</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #003366;
+            --secondary: #00509E;
+            --accent: #FF3300;
+            --bg-light: #F4F6F9;
+            --white: #FFFFFF;
+            --text-dark: #333333;
+            --success: #2E7D32;
+            --warning: #ED6C02;
+            --danger: #D32F2F;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+        body { background-color: var(--bg-light); color: var(--text-dark); padding: 20px; }
+        .container { max-width: 1400px; margin: 0 auto; }
+        
+        /* Header */
+        header { background: linear-gradient(135deg, var(--primary), var(--secondary)); color: var(--white); padding: 25px 30px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin-bottom: 25px; flex-wrap: wrap; gap: 15px; }
+        .logo-area h1 { font-size: 24px; font-weight: 700; margin-bottom: 5px; }
+        .logo-area p { font-size: 13px; opacity: 0.85; }
+        .header-actions { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+        
+        /* Buttons */
+        .btn { background: var(--accent); color: white; border: none; padding: 10px 18px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s; box-shadow: 0 2px 5px rgba(0,0,0,0.1); display: inline-flex; align-items: center; gap: 8px; font-size: 13px; }
+        .btn:hover { opacity: 0.9; transform: translateY(-1px); }
+        .btn-secondary { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); }
+        .btn-secondary:hover { background: rgba(255,255,255,0.25); }
+
+        /* Upload Area */
+        .upload-card { background: var(--white); border: 2px dashed var(--primary); padding: 25px; border-radius: 12px; text-align: center; margin-bottom: 25px; transition: 0.2s; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; }
+        .upload-card:hover { background: #EBF3FA; }
+        
+        /* Controls & Multi-Filters Bar */
+        .controls-bar { background: var(--white); padding: 15px 20px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); flex-wrap: wrap; gap: 15px; }
+        .filter-group { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .filter-group select, .filter-group input { padding: 8px 12px; border: 1px solid #CBD5E1; border-radius: 8px; font-size: 13px; outline: none; background: #FFF; }
+        .goal-setting { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; }
+        .goal-setting input { width: 60px; padding: 5px; border: 1px solid #CBD5E1; border-radius: 6px; text-align: center; font-weight: bold; }
+
+        /* KPIs Grid */
+        .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 20px; margin-bottom: 25px; }
+        .kpi-card { background: var(--white); padding: 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); border-left: 4px solid var(--primary); }
+        .kpi-card.success { border-left-color: var(--success); }
+        .kpi-card.warning { border-left-color: var(--warning); }
+        .kpi-card.danger { border-left-color: var(--danger); }
+        .kpi-title { font-size: 12px; font-weight: 600; color: #64748B; text-transform: uppercase; margin-bottom: 8px; }
+        .kpi-value { font-size: 24px; font-weight: 700; color: var(--primary); }
+
+        /* Charts Section */
+        .charts-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 25px; margin-bottom: 25px; }
+        .chart-card { background: var(--white); padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); position: relative; height: 300px; display: flex; flex-direction: column; }
+        .chart-title { font-size: 15px; font-weight: 700; color: var(--primary); margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
+        .chart-canvas-wrapper { position: relative; flex-grow: 1; width: 100%; height: calc(100% - 25px); }
+
+        /* Executive Summary Card */
+        .exec-summary-card { background: var(--white); border-radius: 12px; padding: 25px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); margin-bottom: 25px; border-top: 4px solid var(--accent); }
+        .exec-summary-title { font-size: 16px; font-weight: 700; color: var(--primary); margin-bottom: 15px; display: flex; align-items: center; gap: 8px; }
+        .exec-summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+        .summary-box { background: #F8FAFC; padding: 15px; border-radius: 8px; border: 1px solid #E2E8F0; }
+        .summary-box h4 { font-size: 13px; font-weight: 700; color: var(--primary); margin-bottom: 8px; text-transform: uppercase; }
+        .summary-box p { font-size: 12px; color: #475569; line-height: 1.6; }
+
+        /* Obs Panel Section */
+        .obs-card { background: var(--white); border-radius: 12px; padding: 25px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); margin-bottom: 25px; border-top: 4px solid var(--secondary); }
+        .obs-form { display: grid; grid-template-columns: 1fr 2fr auto; gap: 12px; margin-top: 15px; align-items: center; flex-wrap: wrap; }
+        .obs-form select, .obs-form input { padding: 10px 12px; border: 1px solid #CBD5E1; border-radius: 8px; font-size: 13px; outline: none; background: #FFF; width: 100%; }
+        .obs-list-container { margin-top: 20px; max-height: 250px; overflow-y: auto; border: 1px solid #E2E8F0; border-radius: 8px; padding: 10px; background: #F8FAFC; }
+        .obs-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: white; border: 1px solid #E2E8F0; border-radius: 6px; margin-bottom: 8px; font-size: 13px; }
+        .obs-item:last-child { margin-bottom: 0; }
+        .obs-actions-bar { margin-top: 15px; display: flex; justify-content: flex-end; }
+
+        /* Table Section */
+        .table-card { background: var(--white); border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; min-width: 800px; }
+        th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #E2E8F0; }
+        th { background-color: var(--primary); color: var(--white); font-weight: 600; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px; cursor: pointer; user-select: none; }
+        th:hover { background-color: var(--secondary); }
+        th span.sort-icon { font-size: 10px; margin-left: 5px; opacity: 0.7; }
+        tr:hover { background-color: #F8FAFC; }
+        .badge { padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; display: inline-block; margin-right: 4px; }
+        .badge-success { background: #E8F5E9; color: var(--success); }
+        .badge-danger { background: #FFEBEE; color: var(--danger); }
+        .badge-warning { background: #FFF3E0; color: #E65100; }
+        .copy-btn { background: #00509E; color: white; border: none; padding: 5px 10px; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; transition: 0.2s; }
+        .copy-btn:hover { background: var(--primary); }
+
+        /* Toast notification */
+        #toast { position: fixed; bottom: 20px; right: 20px; background: #333; color: white; padding: 10px 20px; border-radius: 8px; font-size: 13px; z-index: 1000; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
+        #toast.show { opacity: 1; }
+
+        /* Executive Report View Mode */
+        body.exec-report .upload-card, body.exec-report .controls-bar, body.exec-report .obs-card, body.exec-report .copy-btn, body.exec-report header .header-actions { display: none !important; }
+        body.exec-report { background: white; padding: 10px; }
+        body.exec-report .container { max-width: 100%; }
+        body.exec-report header { background: var(--primary) !important; color: white !important; margin-bottom: 15px; }
+    
+        /* Popover para Múltiplas CAFs */
+        .caf-popover-container { position: relative; display: inline-block; cursor: pointer; }
+        .caf-popover-content {
+            visibility: hidden;
+            width: 260px;
+            background-color: #0F172A;
+            color: #fff;
+            text-align: left;
+            border-radius: 8px;
+            padding: 10px 12px;
+            position: absolute;
+            z-index: 100;
+            bottom: 125%;
+            left: 50%;
+            transform: translateX(-50%);
+            opacity: 0;
+            transition: opacity 0.2s;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            font-size: 12px;
+            border: 1px solid #334155;
+        }
+        .caf-popover-content::after {
+            content: "";
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            margin-left: -5px;
+            border-width: 5px;
+            border-style: solid;
+            border-color: #0F172A transparent transparent transparent;
+        }
+        .caf-popover-container:hover .caf-popover-content {
+            visibility: visible;
+            opacity: 1;
+        }
+        .caf-item { display: flex; justify-content: space-between; margin-bottom: 4px; border-bottom: 1px solid #1E293B; padding-bottom: 3px; }
+        .caf-item:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <div class="logo-area">
+            <h1>Total Express - Dashboard Executivo Avançado</h1>
+            <p>Controle Operacional, Filtros Múltiplos, Alerta de Múltiplas CAFs e Observações</p>
+        </div>
+        <div class="header-actions">
+            <button class="btn btn-secondary" onclick="loadDemoData()">Carregar Dados Demo</button>
+            <button class="btn btn-secondary" onclick="exportToExcel()">Baixar Tabela em Excel 📊</button>
+            <button class="btn" onclick="toggleReportMode()">Imprimir Relatório</button>
+        </div>
+    </header>
+
+    <div class="upload-card" id="drop-zone">
+        <p style="font-weight: 700; color: var(--primary); font-size: 16px;">📁 Importar Relatório Operacional da Total Express</p>
+        <p style="font-size: 13px; color: #64748B;">Arraste e solte o seu ficheiro CSV aqui ou clique no botão abaixo</p>
+        <label for="csv-file-input" class="btn" style="cursor: pointer; margin-top: 5px;">
+            Selecionar Ficheiro CSV 📂
+        </label>
+        <input type="file" id="csv-file-input" accept=".csv, .txt" style="display: none;">
+    </div>
+
+    <div class="controls-bar">
+        <div class="filter-group">
+            <input type="text" id="search-input" placeholder="Pesquisar CAF ou Motorista..." onkeyup="applyFilters()" style="width: 200px;">
+            <select id="filter-status" onchange="applyFilters()">
+                <option value="">Status: Todos</option>
+                <option value="100pct">✨ CAFs 100% (Concluídos)</option>
+                <option value="Multiplas">⚠️ Motorista com Múltiplas CAFs (>1)</option>
+                <option value="Sucesso">Alta Efetividade (≥ 80%)</option>
+                <option value="Atencao">Atenção (< 80%)</option>
+            </select>
+            <select id="filter-driver" onchange="applyFilters()">
+                <option value="">Motorista: Todos</option>
+            </select>
+            <input type="number" id="filter-min-vols" placeholder="Mín. Vols" onkeyup="applyFilters()" onchange="applyFilters()" style="width: 90px;" title="Volume Total Mínimo">
+        </div>
+        <div class="goal-setting">
+            <span>🎯 Meta (%):</span>
+            <input type="number" id="target-efet" value="85" min="0" max="100" onchange="updateDashboard()">
+            <span id="goal-status-badge" class="badge badge-success" style="margin-left: 5px;">Atingida</span>
+        </div>
+    </div>
+
+    <div class="kpi-grid">
+        <div class="kpi-card">
+            <div class="kpi-title">Total de CAFs</div>
+            <div class="kpi-value" id="kpi-cafs">0</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-title">Volumes Alocados</div>
+            <div class="kpi-value" id="kpi-vols">0</div>
+        </div>
+        <div class="kpi-card success">
+            <div class="kpi-title">Volumes Entregues</div>
+            <div class="kpi-value" id="kpi-entregues">0</div>
+        </div>
+        <div class="kpi-card warning">
+            <div class="kpi-title">Não Conformidades (NC)</div>
+            <div class="kpi-value" id="kpi-ncs">0</div>
+        </div>
+        <div class="kpi-card danger">
+            <div class="kpi-title">Volumes Pendentes</div>
+            <div class="kpi-value" id="kpi-pendentes">0</div>
+        </div>
+        <div class="kpi-card" id="kpi-card-efet">
+            <div class="kpi-title">Efetividade Geral</div>
+            <div class="kpi-value" id="kpi-efetividade">0.0%</div>
+        </div>
+    </div>
+
+    <div class="exec-summary-card">
+        <div class="exec-summary-title">
+            <span>📋 Relatório Resumido Executivo do Turno</span>
+        </div>
+        <div class="exec-summary-grid">
+            <div class="summary-box">
+                <h4>⚠️ Top 5 Motoristas (Mais Volumes Pendentes)</h4>
+                <p id="sum-top-pendentes">Aguardando dados...</p>
+            </div>
+            <div class="summary-box">
+                <h4>📋 Top 5 Motoristas (Mais CAFs Abertas)</h4>
+                <p id="sum-top-cafs-abertas">Aguardando dados...</p>
+            </div>
+            <div class="summary-box">
+                <h4>✨ Top 5 Motoristas (CAFs 100% Concluídos)</h4>
+                <p id="sum-top-100pct">Aguardando dados...</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="charts-container">
+        <div class="chart-card">
+            <div class="chart-title">Distribuição de Status de Volume</div>
+            <div class="chart-canvas-wrapper">
+                <canvas id="statusChart"></canvas>
+            </div>
+        </div>
+        <div class="chart-card">
+            <div class="chart-title">Top 5 Motoristas por Volume Alocado</div>
+            <div class="chart-canvas-wrapper">
+                <canvas id="driversChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="table-card">
+        <div class="chart-title">
+            <span>Detalhamento Operacional por Rota / CAF (Clique no cabeçalho para ordenar)</span>
+            <span id="record-count" style="font-size: 12px; font-weight: normal; color: #64748B;">0 registos encontrados</span>
+        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th onclick="sortTable('CAF')">CAF <span class="sort-icon">↕</span></th>
+                    <th onclick="sortTable('Data de Abertura')">Data <span class="sort-icon">↕</span></th>
+                    <th onclick="sortTable('Nome do Motorista')">Motorista <span class="sort-icon">↕</span></th>
+                    <th onclick="sortTable('vols')">Total Vols <span class="sort-icon">↕</span></th>
+                    <th onclick="sortTable('entregues')">Entregues <span class="sort-icon">↕</span></th>
+                    <th onclick="sortTable('ncs')">NCs <span class="sort-icon">↕</span></th>
+                    <th onclick="sortTable('pendentes')">Pendentes <span class="sort-icon">↕</span></th>
+                    <th onclick="sortTable('efetividade')">Efetividade <span class="sort-icon">↕</span></th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody id="table-body">
+                <tr><td colspan="9" style="text-align: center; color: #64748B;">Carregue um ficheiro CSV ou clique em "Carregar Dados Demo" para iniciar.</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Central de Observações e Feedback (Posicionada no Final da Página) -->
+    <div class="obs-card" style="margin-top: 25px;">
+        <div class="chart-title">
+            <span>📝 Central de Observações e Feedback Operacional por Motorista</span>
+        </div>
+        <p style="font-size: 13px; color: #64748B; margin-bottom: 10px;">Registe notas sobre contatos, justificativas de não entrega ou ocorrências para consolidar o relatório da gestão.</p>
+        
+        <div class="obs-form">
+            <select id="obs-driver-select">
+                <option value="">Selecione o Motorista...</option>
+            </select>
+            <input type="text" id="obs-text-input" placeholder="Escreva a observação (ex: Contatado, motorista informou que houve recusa no endereço X)...">
+            <button class="btn" onclick="addObservation()">Adicionar Nota ➕</button>
+        </div>
+
+        <div class="obs-list-container" id="obs-list-container">
+            <div style="text-align: center; color: #64748B; font-size: 13px; padding: 10px;">Nenhuma observação registada para este turno.</div>
+        </div>
+
+        <div class="obs-actions-bar">
+            <button class="btn" onclick="copyManagementReport()" style="background: var(--success);">📋 Copiar Relatório Completo para a Gestão</button>
+        </div>
+    </div>
+</div>
+
+<div id="toast">Texto copiado para a área de transferência!</div>
+
+<script>
+let globalData = [];
+let filteredData = [];
+let driverCafCounts = {};
+let operationalObservations = [];
+let statusChartInstance = null;
+let driversChartInstance = null;
+let currentSortCol = '';
+let sortAsc = true;
+
+const dropZone = document.getElementById('drop-zone');
+const fileInput = document.getElementById('csv-file-input');
+
+dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.style.background = '#EBF3FA'; });
+dropZone.addEventListener('dragleave', () => { dropZone.style.background = '#FFF'; });
+dropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropZone.style.background = '#FFF';
+    if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+});
+
+fileInput.addEventListener('change', (e) => {
+    if (e.target.files.length) {
+        handleFile(e.target.files[0]);
+    }
+});
+
+function handleFile(file) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        parseCSV(e.target.result);
+    };
+    reader.readAsText(file, 'UTF-8');
+}
+
+function parseCSV(text) {
+    text = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+    const lines = text.split('\n');
+    if (lines.length < 2) {
+        alert("O ficheiro CSV está vazio ou inválido.");
+        return;
+    }
+    
+    const delimiter = lines[0].includes(';') ? ';' : ',';
+    const headers = lines[0].split(delimiter).map(h => h.replace(/["\r\ufeff]/g, '').trim());
+    
+    const parsed = [];
+    driverCafCounts = {};
+
+    for (let i = 1; i < lines.length; i++) {
+        if (!lines[i].trim()) continue;
+        const row = lines[i].split(delimiter).map(val => val.replace(/["\r]/g, '').trim());
+        if (row.length >= 3) {
+            let obj = {};
+            headers.forEach((h, idx) => obj[h] = row[idx] || '');
+            
+            let cafVal = obj['CAF'] || obj['\ufeffCAF'] || row[0] || '';
+            let motoristaVal = obj['Nome do Motorista'] || row[5] || 'Não Atribuído';
+            let dataVal = obj['Data de Abertura'] || row[3] || '';
+            let qtdeVal = parseFloat((obj['QTDE Total'] || row[7] || '0').replace(',', '.')) || 0;
+            let entreguesVal = parseFloat((obj['Entregues/RMA/Reversa Executada'] || row[8] || '0').replace(',', '.')) || 0;
+            let ncsVal = parseFloat((obj["NC's Atualizadas"] || row[9] || '0').replace(',', '.')) || 0;
+
+            obj.CAF = cafVal.replace(/["\ufeff]/g, '').trim();
+            obj['Data de Abertura'] = dataVal;
+            obj['Nome do Motorista'] = motoristaVal;
+            obj.vols = qtdeVal;
+            obj.entregues = entreguesVal;
+            obj.ncs = ncsVal;
+            obj.pendentes = Math.max(0, obj.vols - obj.entregues - obj.ncs);
+            obj.efetividade = obj.vols > 0 ? (obj.entregues / obj.vols) : 0;
+            
+            if (obj.CAF && obj.CAF !== 'CAF') {
+                parsed.push(obj);
+            }
+        }
+    }
+
+    if (parsed.length === 0) {
+        alert("Não foi possível extrair linhas válidas. Verifique o formato do CSV.");
+        return;
+    }
+
+    parsed.forEach(d => {
+        let drv = d['Nome do Motorista'];
+        driverCafCounts[drv] = (driverCafCounts[drv] || 0) + 1;
+    });
+
+    parsed.forEach(d => {
+        d.cafCount = driverCafCounts[d['Nome do Motorista']];
+    });
+
+    globalData = parsed;
+    operationalObservations = [];
+    populateDriverDropdown();
+    updateDashboard();
+    renderObservations();
+}
+
+function loadDemoData() {
+    globalData = [
+        { CAF: '24429858', 'Data de Abertura': '10/11/2026', 'Nome do Motorista': 'CARLOS SILVA', 'QTDE Total': '50', 'Entregues/RMA/Reversa Executada': '50', "NC's Atualizadas": '0', vols: 50, entregues: 50, ncs: 0, pendentes: 0, efetividade: 1.0 },
+        { CAF: '24429859', 'Data de Abertura': '10/11/2026', 'Nome do Motorista': 'CARLOS SILVA', 'QTDE Total': '25', 'Entregues/RMA/Reversa Executada': '20', "NC's Atualizadas": '2', vols: 25, entregues: 20, ncs: 2, pendentes: 3, efetividade: 20/25 },
+        { CAF: '24429860', 'Data de Abertura': '10/11/2026', 'Nome do Motorista': 'PABLO HENRIQUE', 'QTDE Total': '100', 'Entregues/RMA/Reversa Executada': '98', "NC's Atualizadas": '2', vols: 100, entregues: 98, ncs: 2, pendentes: 0, efetividade: 98/100 },
+        { CAF: '24429861', 'Data de Abertura': '10/11/2026', 'Nome do Motorista': 'CAMILA NATALIE', 'QTDE Total': '71', 'Entregues/RMA/Reversa Executada': '69', "NC's Atualizadas": '1', vols: 71, entregues: 69, ncs: 1, pendentes: 1, efetividade: 69/71 },
+        { CAF: '24429862', 'Data de Abertura': '10/11/2026', 'Nome do Motorista': 'LUIS HENRIQUE WENIER', 'QTDE Total': '420', 'Entregues/RMA/Reversa Executada': '0', "NC's Atualizadas": '0', vols: 420, entregues: 0, ncs: 0, pendentes: 420, efetividade: 0 },
+        { CAF: '24429863', 'Data de Abertura': '10/11/2026', 'Nome do Motorista': 'MICHELE EMILY', 'QTDE Total': '144', 'Entregues/RMA/Reversa Executada': '2', "NC's Atualizadas": '0', vols: 144, entregues: 2, ncs: 0, pendentes: 142, efetividade: 2/144 }
+    ];
+
+    driverCafCounts = {};
+    globalData.forEach(d => {
+        let drv = d['Nome do Motorista'];
+        driverCafCounts[drv] = (driverCafCounts[drv] || 0) + 1;
+    });
+    globalData.forEach(d => {
+        d.cafCount = driverCafCounts[d['Nome do Motorista']];
+    });
+
+    operationalObservations = [];
+    populateDriverDropdown();
+    updateDashboard();
+    renderObservations();
+}
+
+function populateDriverDropdown() {
+    const driverSelect = document.getElementById('filter-driver');
+    driverSelect.innerHTML = '<option value="">Motorista: Todos</option>';
+    
+    const obsSelect = document.getElementById('obs-driver-select');
+    obsSelect.innerHTML = '<option value="">Selecione o Motorista...</option>';
+
+    const drivers = [...new Set(globalData.map(d => d['Nome do Motorista']))].sort();
+    drivers.forEach(drv => {
+        const count = driverCafCounts[drv];
+        
+        const opt = document.createElement('option');
+        opt.value = drv;
+        opt.textContent = `${drv} (${count} CAFs)`;
+        driverSelect.appendChild(opt);
+
+        const optObs = document.createElement('option');
+        optObs.value = drv;
+        optObs.textContent = drv;
+        obsSelect.appendChild(optObs);
+    });
+}
+
+function updateDashboard() {
+    if (!globalData.length) return;
+
+    let totalCafs = globalData.length;
+    let totalVols = 0, totalEntregues = 0, totalNcs = 0, totalPendentes = 0;
+
+    globalData.forEach(d => {
+        totalVols += d.vols;
+        totalEntregues += d.entregues;
+        totalNcs += d.ncs;
+        totalPendentes += d.pendentes;
+    });
+
+    let efetividadeGeral = totalVols > 0 ? (totalEntregues / totalVols) : 0;
+
+    document.getElementById('kpi-cafs').innerText = totalCafs.toLocaleString();
+    document.getElementById('kpi-vols').innerText = totalVols.toLocaleString();
+    document.getElementById('kpi-entregues').innerText = totalEntregues.toLocaleString();
+    document.getElementById('kpi-ncs').innerText = totalNcs.toLocaleString();
+    document.getElementById('kpi-pendentes').innerText = totalPendentes.toLocaleString();
+    document.getElementById('kpi-efetividade').innerText = (efetividadeGeral * 100).toFixed(1) + '%';
+
+    const targetVal = parseFloat(document.getElementById('target-efet').value) / 100;
+    const goalBadge = document.getElementById('goal-status-badge');
+    const efetCard = document.getElementById('kpi-card-efet');
+    if (efetividadeGeral >= targetVal) {
+        goalBadge.innerText = "Atingida";
+        goalBadge.className = "badge badge-success";
+        efetCard.className = "kpi-card success";
+    } else {
+        goalBadge.innerText = "Abaixo";
+        goalBadge.className = "badge badge-danger";
+        efetCard.className = "kpi-card danger";
+    }
+
+    updateSummary();
+    renderCharts(totalEntregues, totalNcs, totalPendentes);
+    applyFilters();
+}
+
+function updateSummary() {
+    let driverPendMap = {};
+    globalData.forEach(d => {
+        let drv = d['Nome do Motorista'];
+        if (!driverPendMap[drv]) driverPendMap[drv] = { pendentes: 0, cafs: 0 };
+        driverPendMap[drv].pendentes += d.pendentes;
+        driverPendMap[drv].cafs += 1;
+    });
+
+    let sortedByPend = Object.entries(driverPendMap)
+        .sort((a, b) => b[1].pendentes - a[1].pendentes)
+        .slice(0, 5);
+
+    let pendText = sortedByPend.length > 0 
+        ? sortedByPend.map((item, idx) => `${idx + 1}. <b>${item[0]}</b>: ${item[1].pendentes} pends`).join('<br>')
+        : 'Nenhum registro encontrado.';
+    document.getElementById('sum-top-pendentes').innerHTML = pendText;
+
+    let sortedByCafs = Object.entries(driverCafCounts)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5);
+
+    let cafsText = sortedByCafs.length > 0
+        ? sortedByCafs.map((item, idx) => `${idx + 1}. <b>${item[0]}</b>: ${item[1]} CAFs`).join('<br>')
+        : 'Nenhum registro encontrado.';
+    document.getElementById('sum-top-cafs-abertas').innerHTML = cafsText;
+
+    let perfectDrivers = globalData.filter(d => d.efetividade >= 1.0);
+    let uniquePerfect = {};
+    perfectDrivers.forEach(d => {
+        let drv = d['Nome do Motorista'];
+        if (!uniquePerfect[drv]) uniquePerfect[drv] = 0;
+        uniquePerfect[drv] += d.vols;
+    });
+
+    let sortedPerfect = Object.entries(uniquePerfect)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5);
+
+    let perfectText = sortedPerfect.length > 0
+        ? sortedPerfect.map((item, idx) => `${idx + 1}. <b>${item[0]}</b> (${item[1]} vols)`).join('<br>')
+        : 'Nenhum motorista 100% neste turno.';
+    document.getElementById('sum-top-100pct').innerHTML = perfectText;
+}
+
+function addObservation() {
+    const driver = document.getElementById('obs-driver-select').value;
+    const text = document.getElementById('obs-text-input').value.trim();
+
+    if (!driver) {
+        alert("Por favor, selecione um motorista.");
+        return;
+    }
+    if (!text) {
+        alert("Por favor, escreva a observação.");
+        return;
+    }
+
+    operationalObservations.push({ driver, text, time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) });
+    document.getElementById('obs-text-input').value = '';
+    renderObservations();
+}
+
+function removeObservation(index) {
+    operationalObservations.splice(index, 1);
+    renderObservations();
+}
+
+function renderObservations() {
+    const container = document.getElementById('obs-list-container');
+    if (operationalObservations.length === 0) {
+        container.innerHTML = '<div style="text-align: center; color: #64748B; font-size: 13px; padding: 10px;">Nenhuma observação registada para este turno.</div>';
+        return;
+    }
+
+    container.innerHTML = '';
+    operationalObservations.forEach((obs, idx) => {
+        const div = document.createElement('div');
+        div.className = 'obs-item';
+        div.innerHTML = `
+            <div><b>${obs.driver}</b> <span style="font-size:11px; color:#64748B;">(${obs.time})</span>: ${obs.text}</div>
+            <button class="copy-btn" style="background:var(--danger); padding:3px 8px;" onclick="removeObservation(${idx})">Remover</button>
+        `;
+        container.appendChild(div);
+    });
+}
+
+function copyManagementReport() {
+    if (operationalObservations.length === 0) {
+        alert("Não há observações registadas para gerar o relatório.");
+        return;
+    }
+
+    let reportText = `📋 *RELATÓRIO DE OCORRÊNCIAS E FEEDBACK - GESTÃO*\n\n`;
+    operationalObservations.forEach((obs, idx) => {
+        reportText += `${idx + 1}. *${obs.driver}* (${obs.time}): ${obs.text}\n`;
+    });
+    reportText += `\n_Gerado automaticamente pelo Dashboard Operacional_`;
+
+    navigator.clipboard.writeText(reportText).then(() => {
+        const toast = document.getElementById('toast');
+        toast.innerText = "Relatório para a gestão copiado com sucesso!";
+        toast.className = "show";
+        setTimeout(() => { toast.className = ""; }, 2500);
+    }).catch(err => {
+        console.error('Erro ao copiar: ', err);
+    });
+}
+
+function renderCharts(ent, ncs, pend) {
+    const ctx1 = document.getElementById('statusChart').getContext('2d');
+    if (statusChartInstance) statusChartInstance.destroy();
+    statusChartInstance = new Chart(ctx1, {
+        type: 'doughnut',
+        data: {
+            labels: ['Entregues', 'NCs', 'Pendentes'],
+            datasets: [{
+                data: [ent, ncs, pend],
+                backgroundColor: ['#2E7D32', '#ED6C02', '#D32F2F'],
+                borderWidth: 2
+            }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
+    });
+
+    const driverMap = {};
+    globalData.forEach(d => {
+        let name = d['Nome do Motorista'];
+        driverMap[name] = (driverMap[name] || 0) + d.vols;
+    });
+    const sortedDrivers = Object.entries(driverMap).sort((a,b) => b[1] - a[1]).slice(0, 5);
+
+    const ctx2 = document.getElementById('driversChart').getContext('2d');
+    if (driversChartInstance) driversChartInstance.destroy();
+    driversChartInstance = new Chart(ctx2, {
+        type: 'bar',
+        data: {
+            labels: sortedDrivers.map(d => d[0]),
+            datasets: [{
+                label: 'Volumes Alocados',
+                data: sortedDrivers.map(d => d[1]),
+                backgroundColor: '#003366',
+                borderRadius: 4
+            }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y', plugins: { legend: { display: false } } }
+    });
+}
+
+function applyFilters() {
+    const query = document.getElementById('search-input').value.toLowerCase();
+    const statusFilter = document.getElementById('filter-status').value;
+    const driverFilter = document.getElementById('filter-driver').value;
+    const minVols = parseFloat(document.getElementById('filter-min-vols').value) || 0;
+
+    filteredData = globalData.filter(d => {
+        const matchesQuery = (d.CAF && d.CAF.toLowerCase().includes(query)) || 
+                             (d['Nome do Motorista'] && d['Nome do Motorista'].toLowerCase().includes(query));
+        if (!matchesQuery) return false;
+
+        if (statusFilter === '100pct' && d.efetividade < 1.0) return false;
+        if (statusFilter === 'Multiplas' && d.cafCount <= 1) return false;
+        if (statusFilter === 'Sucesso' && d.efetividade < 0.8) return false;
+        if (statusFilter === 'Atencao' && d.efetividade >= 0.8) return false;
+
+        if (driverFilter && d['Nome do Motorista'] !== driverFilter) return false;
+
+        if (d.vols < minVols) return false;
+
+        return true;
+    });
+
+    if (currentSortCol) {
+        sortData(currentSortCol, false);
+    } else {
+        renderTable(filteredData);
+    }
+}
+
+function sortTable(col) {
+    if (currentSortCol === col) {
+        sortAsc = !sortAsc;
+    } else {
+        currentSortCol = col;
+        sortAsc = true;
+    }
+    sortData(currentSortCol, true);
+}
+
+function sortData(col, toggle) {
+    filteredData.sort((a, b) => {
+        let valA = a[col];
+        let valB = b[col];
+
+        if (typeof valA === 'string') {
+            valA = valA.toLowerCase();
+            valB = valB.toLowerCase();
+        }
+
+        if (valA < valB) return sortAsc ? -1 : 1;
+        if (valA > valB) return sortAsc ? 1 : -1;
+        return 0;
+    });
+    renderTable(filteredData);
+}
+
+function renderTable(data) {
+    const tbody = document.getElementById('table-body');
+    tbody.innerHTML = '';
+    
+    if (data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; color: #64748B;">Nenhum registo encontrado com os filtros aplicados.</td></tr>';
+        document.getElementById('record-count').innerText = `0 registos encontrados`;
+        return;
+    }
+
+    data.forEach(d => {
+        const tr = document.createElement('tr');
+        const efetPct = (d.efetividade * 100).toFixed(1) + '%';
+        const badgeClass = d.efetividade >= 1.0 ? 'badge-success' : (d.efetividade >= 0.8 ? 'badge-success' : 'badge-danger');
+        
+        let badgesHtml = `<span class="badge ${badgeClass}">${efetPct}</span>`;
+        
+        const driverCafs = globalData.filter(item => item['Nome do Motorista'] === d['Nome do Motorista']);
+        const totalPendDriver = driverCafs.reduce((acc, c) => acc + c.pendentes, 0);
+
+        if (d.cafCount > 1) {
+            let listHtml = driverCafs.map(c => `<div class="caf-item"><span>CAF <b>${c.CAF}</b></span><span><b>${c.pendentes}</b> pends</span></div>`).join('');
+            badgesHtml += `<div class="caf-popover-container">
+                <span class="badge badge-warning">⚠️ ${d.cafCount} CAFs</span>
+                <div class="caf-popover-content">
+                    <div style="font-weight:700; margin-bottom:6px; color:#FCD34D; border-bottom:1px solid #334155; padding-bottom:3px;">Rotas de ${d['Nome do Motorista']}</div>
+                    ${listHtml}
+                </div>
+            </div>`;
+        }
+
+        let msgText = "";
+        if (driverCafs.length > 1) {
+            let cafsDesc = driverCafs.map(c => `CAF ${c.CAF} (${c.pendentes} pendentes)`).join(', ');
+            msgText = `Olá ${d['Nome do Motorista']}, notamos um total de ${totalPendDriver} volumes pendentes nas suas CAFs (${cafsDesc}). Precisa de suporte?`;
+        } else {
+            msgText = `Olá ${d['Nome do Motorista']}, notamos ${d.pendentes} volumes pendentes na CAF ${d.CAF}. Precisa de suporte?`;
+        }
+
+        const safeMsgText = msgText.replace(/['"`]/g, '');
+
+        tr.innerHTML = `
+            <td><strong>${d.CAF || ''}</strong></td>
+            <td>${d['Data de Abertura'] || ''}</td>
+            <td>${d['Nome do Motorista']}</td>
+            <td>${d.vols.toLocaleString()}</td>
+            <td>${d.entregues.toLocaleString()}</td>
+            <td>${d.ncs.toLocaleString()}</td>
+            <td><strong>${d.pendentes.toLocaleString()}</strong></td>
+            <td>${badgesHtml}</td>
+            <td><button class="copy-btn" onclick="copyToClipboard('${safeMsgText}')">📋 Copiar Texto</button></td>
+        `;
+        tbody.appendChild(tr);
+    });
+    document.getElementById('record-count').innerText = `${data.length} registos encontrados`;
+}
+
+function copyToClipboard(text) {
+    navigator.clipboard.writeText(text).then(() => {
+        const toast = document.getElementById('toast');
+        toast.innerText = "Texto copiado para a área de transferência!";
+        toast.className = "show";
+        setTimeout(() => { toast.className = ""; }, 2500);
+    }).catch(err => {
+        console.error('Erro ao copiar: ', err);
+    });
+}
+
+function toggleReportMode() {
+    document.body.classList.toggle('exec-report');
+    if(document.body.classList.contains('exec-report')) {
+        window.print();
+        setTimeout(() => document.body.classList.remove('exec-report'), 1000);
+    }
+}
+
+function exportToExcel() {
+    if (!globalData.length) {
+        alert("Não há dados carregados para exportar.");
+        return;
+    }
+    let csvContent = "\ufeffCAF;Data de Abertura;Nome do Motorista;QTDE Total;Entregues/RMA/Reversa Executada;NC's Atualizadas;Pendentes;Efetividade\n";
+    
+    (filteredData.length ? filteredData : globalData).forEach(d => {
+        let row = [
+            d.CAF,
+            d['Data de Abertura'],
+            d['Nome do Motorista'],
+            d.vols,
+            d.entregues,
+            d.ncs,
+            d.pendentes,
+            (d.efetividade * 100).toFixed(1) + '%'
+        ];
+        csvContent += row.join(';') + "\n";
+    });
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.setAttribute('href', url);
+    a.setAttribute('download', 'Relatorio_Operacional_Total_Express.csv');
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+}
+</script>
+</body>
+</html>
